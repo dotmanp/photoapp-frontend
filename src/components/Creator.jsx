@@ -3,7 +3,7 @@ import { Container, Form, Button, Alert, Image } from 'react-bootstrap';
 import imageCompression from 'browser-image-compression';
 import { useNavigate } from 'react-router-dom';
 
-const BASE_URL = 'photoshare-grh3b6atckgxbgbc.uksouth-01.azurewebsites.net';
+const BASE_URL = 'https://photoshare-grh3b6atckgxbgbc.uksouth-01.azurewebsites.net';
 
 const Creator = () => {
   const navigate = useNavigate();
@@ -48,14 +48,14 @@ const Creator = () => {
       Object.entries(form).forEach(([key, value]) => formData.append(key, value));
       formData.append('image', compressed);
 
-      const res = await fetch(`${BASE_URL}/media/upload`, {
+      const res = await fetch(`${BASE_URL}/api/media/upload`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
         },
         body: formData,
       });
-
+      console.log('Response:', res);
       const data = await res.json();
       if (res.ok) {
         setStatus({ success: 'Upload successful!', error: '' });
