@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:3000/api';
+const BASE_URL = 'photoshare-grh3b6atckgxbgbc.uksouth-01.azurewebsites.net';
 
 export const login = async (credentials) => {
   const res = await fetch(`${BASE_URL}/auth/login`, {
