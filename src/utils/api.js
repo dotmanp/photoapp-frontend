@@ -35,10 +35,36 @@ export const uploadMedia = async (formData, token) => {
 };
 
 
-
 export const likeMedia = async (id, token) => {
   const res = await fetch(`${BASE_URL}/media/${id}/like`, {
     method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+};
+
+export const getLikes = async (id, token) => {
+  const res = await fetch(`${BASE_URL}/media/${id}/likes`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  console.log("getLikes response", res);
+  return res.json();
+};
+
+export const rateMedia = async (id, rating, token) => {
+  const res = await fetch(`${BASE_URL}/media/${id}/rate`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ rating }),
+  });
+  return res.json();
+};
+
+export const getRatings = async (id, token) => {
+  const res = await fetch(`${BASE_URL}/media/${id}/ratings`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.json();
@@ -56,15 +82,9 @@ export const commentOnMedia = async (id, comment, token) => {
   return res.json();
 };
 
-export const rateMedia = async (id, rating, token) => {
-  const res = await fetch(`${BASE_URL}/media/${id}/rate`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ rating }),
+export const getComments = async (id, token) => {
+  const res = await fetch(`${BASE_URL}/media/${id}/comments`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
   return res.json();
 };
-
