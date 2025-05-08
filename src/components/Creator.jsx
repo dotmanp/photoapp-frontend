@@ -3,7 +3,7 @@ import { Container, Form, Button, Alert, Image } from 'react-bootstrap';
 import imageCompression from 'browser-image-compression';
 import { useNavigate } from 'react-router-dom';
 
-const BASE_URL = 'https://photoshare-grh3b6atckgxbgbc.uksouth-01.azurewebsites.net';
+const BASE_URL = 'https://myappbackends-hebxgrcwgud5gvbw.uksouth-01.azurewebsites.net';
 
 const Creator = () => {
   const navigate = useNavigate();
