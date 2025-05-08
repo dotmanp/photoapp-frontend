@@ -1,22 +1,35 @@
 import React, { useEffect, useState } from 'react';
-import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
+import { Container, Row, Col, Card, Button, Form, Spinner, Alert } from 'react-bootstrap';
+import { jwtDecode } from 'jwt-decode';
 
-const BASE_URL = 'http://localhost:3000/api';
+import {
+  getMedia,
+  likeMedia,
+  commentOnMedia,
+  rateMedia
+} from '../utils/api';
+
+import LogoutButton from './LogoutButton';
 
 const Feed = () => {
   const token = localStorage.getItem('token');
-  const [mediaList, setMediaList] = useState([]);
-  const [isCreator, setIsCreator] = useState(false);
   const navigate = useNavigate();
 
-  const loadMedia = () => {
-    fetch(`${BASE_URL}/media`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then(setMediaList)
-      .catch(console.error);
+  const [mediaList, setMediaList] = useState([]);
+  const [isCreator, setIsCreator] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const loadMedia = async () => {
+    setLoading(true);
+    try {
+      const data = await getMedia(token);
+      setMediaList(data);
+    } catch (err) {
+      console.error('Failed to fetch media:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -28,111 +41,131 @@ const Feed = () => {
   }, []);
 
   const handleLike = async (id) => {
-    const res = await fetch(`${BASE_URL}/media/${id}/like`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await res.json();
+    const data = await likeMedia(id, token);
     alert(`${data.message} (Likes: ${data.totalLikes})`);
-    loadMedia(); // refresh after like
+    loadMedia();
   };
 
   const handleComment = async (e, id) => {
     e.preventDefault();
     const comment = e.target.elements[`comment-${id}`].value;
-    await fetch(`${BASE_URL}/media/${id}/comments`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ comment }),
-    });
+    await commentOnMedia(id, comment, token);
     alert('Comment added');
     e.target.reset();
-    loadMedia(); // refresh after comment
+    loadMedia();
   };
 
   const handleRate = async (e, id) => {
     e.preventDefault();
     const rating = e.target.elements[`rate-${id}`].value;
-    await fetch(`${BASE_URL}/media/${id}/rate`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ rating }),
-    });
+    await rateMedia(id, rating, token);
     alert('Rating added');
     e.target.reset();
-    loadMedia(); // refresh after rating
+    loadMedia();
   };
 
   return (
-    <div className="min-h-screen p-6 bg-gray-100">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-3xl font-bold text-blue-700">📸 Photo Feed</h2>
-        <div className="flex gap-2">
-          <button
-            onClick={loadMedia}
-            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded mr-6"
-          >
-            Refresh Feed
-          </button>
+    <Container className="mt-4">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+      <h2>
+          <i className="bi bi-camera-fill me-2"></i>Photo Feed
+      </h2>
+        <div className="d-flex gap-2">
+          <Button variant="secondary" onClick={loadMedia}>Refresh Feed</Button>
           {isCreator && (
-            <button
-              onClick={() => navigate('/creator')}
-              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded"
-            >
+            <Button variant="primary" onClick={() => navigate('/creator')}>
               Upload New Image
-            </button>
+            </Button>
           )}
+          <LogoutButton />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {mediaList.map((media) => (
-          <div key={media.id} className="bg-white p-4 rounded-lg shadow-md">
-            <div className="relative w-full aspect-square overflow-hidden rounded">
-                <img
-                  src={media.image_url}
-                  alt={media.title}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-            </div>
-            <h3 className="text-xl font-semibold">{media.title}</h3>
-            <p className="text-sm text-gray-600 mb-2">{media.caption}</p>
-            <p className="text-sm text-gray-500">📍 {media.location}</p>
-          <div className="  w-2/3 flex items-center justify-between mt-2">
-            <button onClick={() => handleLike(media.id)} className="text-red-500 mt-2 hover:underline">
-              ❤️ Like
-            </button>
+      {loading ? (
+        <div className="text-center my-5">
+          <Spinner animation="border" variant="primary" />
+        </div>
+      ) : (
+        <Row xs={1} md={2} lg={3} className="g-4">
+          {mediaList.map((media) => (
+            <Col key={media.id}>
+              <Card className="h-100 shadow-sm bg-light text-light">
+                <div style={{ height: '300px', overflow: 'hidden' }}>
+                  <Card.Img
+                    variant="top"
+                    src={media.image_url || 'https://via.placeholder.com/300'}
+                    alt={media.title}
+                    style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                  />
+                </div>
+                <Card.Body>
+                  <Card.Title>{media.title}</Card.Title>
+                  <Card.Text>{media.caption}</Card.Text>
+                  <Card.Text className="text-secondary">📍 {media.location}</Card.Text>
 
-            <form onSubmit={(e) => handleRate(e, media.id)} className="mt-2 flex gap-2 items-center">
-              <input
-                name={`rate-${media.id}`}
-                type="number"
-                min="1"
-                max="5"
-                placeholder="0"
-                className="w-20 px-2 py-1 border rounded text-sm"
-              />
-              <button type="submit" className="bg-green-500 text-white px-3 py-1 rounded text-sm">Rate</button>
-            </form>
-          </div>
-          <form onSubmit={(e) => handleComment(e, media.id)} className="mt-3 flex gap-2">
-              <input
-                name={`comment-${media.id}`}
-                placeholder="Write a comment..."
-                className="flex-1 px-2 py-1 border rounded text-sm"
-              />
-              <button type="submit" className="bg-blue-500 text-white px-3 py-1 rounded text-sm">Comment</button>
-            </form>
-          </div>
-        ))}
-      </div>
-    </div>
+                  {/* ❤️ Likes Count */}
+                  {media.totalLikes && (
+                    <div className="text-muted small mb-2">
+                      <i className="bi bi-heart-fill text-danger me-1"></i>
+                      {media.totalLikes} likes
+                    </div>
+                  )}
+
+                  {/* ⭐ Average Rating */}
+                  {media.averageRating && (
+                    <div className="text-muted small mb-2">
+                      <i className="bi bi-star-fill text-warning me-1"></i>
+                      {media.averageRating.toFixed(1)} average rating
+                    </div>
+                  )}
+
+                  {/* ❤️ Like Button */}
+                  <div className="mb-3">
+                    <Button variant="outline-danger" size="sm" onClick={() => handleLike(media.id)}>
+                      <i className="bi bi-heart-fill me-1"></i> Like
+                    </Button>
+                  </div>
+
+                  {/* ⭐ Rate Form */}
+                  <Form onSubmit={(e) => handleRate(e, media.id)} className="mb-3">
+                    <Form.Label className="mb-1 fw-semibold">
+                      <i className="bi bi-star-fill text-warning me-1"></i> Rate this photo
+                    </Form.Label>
+                    <div className="d-flex gap-2">
+                      <Form.Control
+                        name={`rate-${media.id}`}
+                        type="number"
+                        min="1"
+                        max="5"
+                        placeholder="0"
+                        style={{ width: '100px' }}
+                        required
+                      />
+                      <Button variant="success" size="sm" type="submit">Rate</Button>
+                    </div>
+                  </Form>
+
+                  {/* 💬 Comment Form */}
+                  <Form onSubmit={(e) => handleComment(e, media.id)}>
+                    <Form.Label className="mb-1 fw-semibold">
+                      <i className="bi bi-chat-dots-fill me-1"></i> Comment
+                    </Form.Label>
+                    <div className="d-flex gap-2">
+                      <Form.Control
+                        name={`comment-${media.id}`}
+                        placeholder="Write a comment..."
+                        required
+                      />
+                      <Button type="submit" size="sm" variant="info">Send</Button>
+                    </div>
+                  </Form>
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
+    </Container>
   );
 };
 

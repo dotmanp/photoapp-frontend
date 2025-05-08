@@ -1,38 +1,53 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // ✅ Step 1
+import { Container, Form, Button, Alert, Image } from 'react-bootstrap';
+import imageCompression from 'browser-image-compression';
+import { useNavigate } from 'react-router-dom';
 
 const BASE_URL = 'http://localhost:3000/api';
 
 const Creator = () => {
+  const navigate = useNavigate();
+  const token = localStorage.getItem('token');
+
   const [form, setForm] = useState({
     title: '',
     caption: '',
     location: '',
     people: '',
   });
-  const [file, setFile] = useState(null);
 
-  const navigate = useNavigate(); // ✅ Step 2
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState('');
+  const [status, setStatus] = useState({ success: '', error: '' });
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleImageChange = (e) => {
+    const image = e.target.files[0];
+    setFile(image);
+    if (image) setPreview(URL.createObjectURL(image));
+  };
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
     if (!token) return alert('Unauthorized');
-  
+    if (!file) return setStatus({ error: 'Please select an image.', success: '' });
+
     try {
-      // ✅ Compress the image (Instagram style)
       const options = {
         maxWidthOrHeight: 1080,
         maxSizeMB: 1,
         useWebWorker: true,
       };
-  
+
       const compressed = await imageCompression(file, options);
-  
+
       const formData = new FormData();
-      Object.entries(form).forEach(([k, v]) => formData.append(k, v));
-      formData.append('image', compressed); // ✅ Upload compressed image
-  
+      Object.entries(form).forEach(([key, value]) => formData.append(key, value));
+      formData.append('image', compressed);
+
       const res = await fetch(`${BASE_URL}/media/upload`, {
         method: 'POST',
         headers: {
@@ -40,79 +55,86 @@ const Creator = () => {
         },
         body: formData,
       });
-  
+
       const data = await res.json();
       if (res.ok) {
-        alert('Upload successful!');
+        setStatus({ success: 'Upload successful!', error: '' });
         setForm({ title: '', caption: '', location: '', people: '' });
         setFile(null);
-        navigate('/feed');
+        setPreview('');
+        setTimeout(() => navigate('/feed'), 1000);
       } else {
-        alert(data.error || 'Upload failed');
+        setStatus({ error: data.error || 'Upload failed', success: '' });
       }
     } catch (err) {
       console.error(err);
-      alert('Error uploading media');
+      setStatus({ error: 'Error uploading media', success: '' });
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-purple-100 to-pink-100">
-      <form
-        onSubmit={handleUpload}
-        className="bg-white p-8 rounded-lg shadow-md w-full max-w-lg"
-        encType="multipart/form-data"
-      >
-        <h2 className="text-2xl font-bold mb-6 text-center text-purple-700">Upload Image</h2>
+    <Container className="mt-5" style={{ maxWidth: '600px' }}>
+      <h2 className="mb-4">Upload New Photo</h2>
 
-        <input
-          type="text"
-          placeholder="Title"
-          value={form.title}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
-          required
-          className="mb-3 w-full px-4 py-2 border rounded"
-        />
+      {status.error && <Alert variant="danger">{status.error}</Alert>}
+      {status.success && <Alert variant="success">{status.success}</Alert>}
 
-        <textarea
-          placeholder="Caption"
-          value={form.caption}
-          onChange={(e) => setForm({ ...form, caption: e.target.value })}
-          className="mb-3 w-full px-4 py-2 border rounded"
-        />
+      <Form onSubmit={handleUpload}>
+        <Form.Group className="mb-3">
+          <Form.Label>Title</Form.Label>
+          <Form.Control
+            name="title"
+            value={form.title}
+            onChange={handleChange}
+            required
+            placeholder="Title"
+          />
+        </Form.Group>
 
-        <input
-          type="text"
-          placeholder="Location"
-          value={form.location}
-          onChange={(e) => setForm({ ...form, location: e.target.value })}
-          className="mb-3 w-full px-4 py-2 border rounded"
-        />
+        <Form.Group className="mb-3">
+          <Form.Label>Caption</Form.Label>
+          <Form.Control
+            name="caption"
+            value={form.caption}
+            onChange={handleChange}
+            placeholder="Caption"
+          />
+        </Form.Group>
 
-        <input
-          type="text"
-          placeholder="People (comma separated)"
-          value={form.people}
-          onChange={(e) => setForm({ ...form, people: e.target.value })}
-          className="mb-3 w-full px-4 py-2 border rounded"
-        />
+        <Form.Group className="mb-3">
+          <Form.Label>Location</Form.Label>
+          <Form.Control
+            name="location"
+            value={form.location}
+            onChange={handleChange}
+            placeholder="Location"
+          />
+        </Form.Group>
 
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setFile(e.target.files[0])}
-          required
-          className="mb-6 w-full"
-        />
+        <Form.Group className="mb-3">
+          <Form.Label>People (comma-separated)</Form.Label>
+          <Form.Control
+            name="people"
+            value={form.people}
+            onChange={handleChange}
+            placeholder="e.g. Alice,Bob"
+          />
+        </Form.Group>
 
-        <button
-          type="submit"
-          className="w-full bg-purple-600 text-white font-semibold py-2 rounded hover:bg-purple-700 transition"
-        >
-          Upload
-        </button>
-      </form>
-    </div>
+        <Form.Group className="mb-4">
+          <Form.Label>Image</Form.Label>
+          <Form.Control type="file" accept="image/*" onChange={handleImageChange} required />
+        </Form.Group>
+
+        {preview && (
+          <div className="mb-4 text-center">
+            <Image src={preview} alt="Preview" fluid rounded />
+          </div>
+        )}
+
+        <Button type="submit" className="w-100">Upload</Button>
+      </Form>
+    </Container>
   );
 };
 
