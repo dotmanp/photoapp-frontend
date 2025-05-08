@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Form, Button, Container, Alert } from 'react-bootstrap';
 import { login } from '../utils/api';
 
@@ -53,7 +53,7 @@ const Login = () => {
         </Button>
 
         <div className="mt-3 text-center">
-          Don’t have an account? <a href="/register" className="text-decoration-none">Register here</a>
+          Don’t have an account? <Link to="/register" className="text-decoration-none">Register here</Link>
         </div>
       </Form>
     </Container>
